@@ -1,28 +1,48 @@
 require(tidyverse)
 require(patentsview)
 
-countPatents <- function(searchYear = 2019) {
+countPatents <- function(searchYear) {
   query <- with_qfuns(
     and(
       eq(inventor_county_fips = "17113"),
-      gte(patent_year = eval(searchYear))
+      gte(patent_year = eval(2019))
     )
   )
+
+  fields <- c("patent_number", "patent_year", "patent_firstnamed_inventor_city", "patent_firstnamed_inventor_state")
   
-  fields <- c("patent_number", "patent_year", "patent_date", "inventor_city", "inventor_county_fips")
-  
-  pv_res <- search_pv(query, fields, all_pages = TRUE) %>%
+  pv_res <- search_pv(query, fields, endpoint = "patents", all_pages = TRUE) %>%
     as_tibble() %>%
     select(data) %>%
     unnest(data) %>%
     unique() %>%
-    unnest(inventors) %>%
     group_by(patent_number) %>%
-    summarize(city = first(inventor_city)) %>%
+    summarize(city = first(patent_firstnamed_inventor_city)) %>%
     group_by(city) %>%
     count(city) %>%
     arrange(desc(n)) %>%
     rename("number_of_patents" = n)
 }
 
-patents <- countPatents(searchYear = 2018)
+patents <- countPatents(searchYear = 2005) %>%
+  print()
+
+
+query <- with_qfuns(
+  and(
+    gte(patent_year = 2007)
+  )
+)
+
+fields <- c("patent_number", "patent_date")
+
+test <- as_tibble(pv_res) %>%
+  select(data) %>%
+  unnest(data) %>%
+  unique() %>%
+  group_by(patent_number) %>%
+  summarize(city = first(patent_firstnamed_inventor_city)) %>%
+  group_by(city) %>%
+  count(city) %>%
+  arrange(desc(n)) %>%
+  rename("number_of_patents" = n)
