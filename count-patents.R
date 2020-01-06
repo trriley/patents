@@ -17,7 +17,7 @@ countPatents <- function() {
     )
   )
 
-  fields <- c("patent_number", "patent_year", "patent_firstnamed_inventor_city", "patent_firstnamed_inventor_state")
+  fields <- c("assignee_organization", "patent_number", "patent_year", "patent_abstract", "patent_date", "patent_firstnamed_inventor_city", "patent_firstnamed_inventor_state")
   
   pv_res <- search_pv(query, fields, endpoint = "patents", all_pages = TRUE) %>%
     as_tibble() %>%
@@ -34,3 +34,32 @@ countPatents <- function() {
 
 patents <- countPatents() %>%
   write_csv(here("patents.csv"))
+
+countPatentsByOrg <- function() {
+  query <- with_qfuns(
+    and(
+      eq(patent_firstnamed_inventor_state = "IL"),
+      or(
+        eq(patent_firstnamed_inventor_city = "Bloomington"),
+        eq(patent_firstnamed_inventor_city = "Normal")
+      ),
+      eq(patent_year = 2019)
+    )
+  )
+  
+  fields <- c("assignee_organization", "patent_number", "patent_year", "patent_abstract", "patent_date", "patent_firstnamed_inventor_city", "patent_firstnamed_inventor_state")
+  
+  pv_res <- search_pv(query, fields, endpoint = "patents", all_pages = TRUE) %>%
+    as_tibble() %>%
+    select(data) %>%
+    unnest(data) %>%
+    unique() %>%
+    select(assignees) %>%
+    unnest(assignees) %>%
+    group_by(assignee_organization) %>%
+    tally() %>%
+    arrange(desc(n))
+}
+
+patentsByOrg <- countPatentsByOrg() %>%
+  write_csv(here("patents-by-organization.csv"))
